@@ -3,6 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import seaborn as sns
 import matplotlib.pyplot as plt
+import time
 from utils import (
     SEMICONDUCTOR_TICKERS, 
     fetch_stock_data, 
@@ -20,6 +21,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Initialize session state for auto refresh
+if 'auto_refresh' not in st.session_state:
+    st.session_state.auto_refresh = True
+if 'last_refresh' not in st.session_state:
+    st.session_state.last_refresh = time.time()
 
 # Custom CSS with dark mode support
 st.markdown("""
@@ -61,6 +68,10 @@ st.markdown("""
 # Sidebar configuration
 st.sidebar.title("Analysis Settings")
 
+# Auto-refresh toggle
+auto_refresh = st.sidebar.checkbox("Auto-refresh data", value=True)
+st.session_state.auto_refresh = auto_refresh
+
 # Timeframe selection with custom periods
 timeframe = st.sidebar.selectbox(
     "Select Analysis Timeframe",
@@ -79,6 +90,11 @@ if not selected_stocks:
     selected_stocks = SEMICONDUCTOR_TICKERS[:3]
     st.sidebar.warning("At least one stock must be selected. Defaulting to first three stocks.")
 
+# Auto-refresh logic
+if st.session_state.auto_refresh and time.time() - st.session_state.last_refresh >= 2:
+    st.session_state.last_refresh = time.time()
+    st.rerun()
+
 # Fetch and process data
 with st.spinner('Fetching stock data...'):
     stock_data, volume_data = fetch_stock_data(selected_stocks, timeframe)
@@ -91,6 +107,9 @@ with st.spinner('Fetching stock data...'):
     price_changes = get_price_changes(stock_data)
     technical_indicators = calculate_technical_indicators(stock_data)
     normalized_data = normalize_data(stock_data)
+
+# Display last update time
+st.sidebar.text(f"Last updated: {time.strftime('%H:%M:%S')}")
 
 # Create tabs for different analyses
 tab1, tab2, tab3, tab4 = st.tabs([
