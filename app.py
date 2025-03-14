@@ -21,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Custom CSS with dark mode support
 st.markdown("""
     <style>
     .stTabs [data-baseweb="tab-list"] {
@@ -32,10 +32,28 @@ st.markdown("""
         padding-top: 10px;
         padding-bottom: 10px;
     }
+    /* Custom styling for metrics */
     .stMetric {
-        background-color: #f0f2f6;
-        padding: 10px;
-        border-radius: 5px;
+        background-color: var(--background-color);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+    /* Dark mode specific styles */
+    [data-theme="dark"] .stMetric {
+        --background-color: rgba(255, 255, 255, 0.1);
+        --border-color: rgba(255, 255, 255, 0.2);
+        color: white !important;
+    }
+    /* Light mode specific styles */
+    [data-theme="light"] .stMetric {
+        --background-color: rgba(240, 242, 246, 0.8);
+        --border-color: rgba(0, 0, 0, 0.1);
+        color: black !important;
+    }
+    /* Ensure text contrast */
+    .metric-value, .metric-label {
+        color: inherit !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -112,11 +130,23 @@ with tab1:
         indicator_cols = st.columns(len(selected_stocks))
         for idx, ticker in enumerate(selected_stocks):
             with indicator_cols[idx]:
-                st.metric(
-                    f"{ticker} Indicators",
-                    f"RSI: {technical_indicators[ticker]['RSI']:.2f}",
-                    f"MA20: ${technical_indicators[ticker]['MA20']:.2f}"
+                rsi_value = technical_indicators[ticker]['RSI']
+                ma20_value = technical_indicators[ticker]['MA20']
+
+                # RSI color coding
+                rsi_color = (
+                    "🔴" if rsi_value > 70 else
+                    "🟢" if rsi_value < 30 else
+                    "⚪"
                 )
+
+                st.markdown(f"""
+                    <div class="stMetric">
+                        <h3>{ticker}</h3>
+                        <p class="metric-value">RSI: {rsi_color} {rsi_value:.2f}</p>
+                        <p class="metric-value">MA20: ${ma20_value:.2f}</p>
+                    </div>
+                """, unsafe_allow_html=True)
 
 with tab2:
     st.header("Correlation Analysis")
