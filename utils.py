@@ -1,5 +1,6 @@
 import yfinance as yf
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 
 # List of major semiconductor companies traded on NYSE
@@ -18,7 +19,10 @@ def get_company_info(ticker):
             'sector': info.get('sector', 'N/A'),
             'industry': info.get('industry', 'N/A'),
             'description': info.get('longBusinessSummary', 'N/A'),
-            'website': info.get('website', 'N/A')
+            'website': info.get('website', 'N/A'),
+            'market_cap': info.get('marketCap', 'N/A'),
+            'pe_ratio': info.get('trailingPE', 'N/A'),
+            'dividend_yield': info.get('dividendYield', 'N/A'),
         }
     except Exception as e:
         return None
@@ -27,13 +31,15 @@ def fetch_stock_data(tickers, period='1y'):
     """Fetch historical stock data for multiple tickers."""
     try:
         data = pd.DataFrame()
+        volume_data = pd.DataFrame()
         for ticker in tickers:
             stock = yf.Ticker(ticker)
-            hist = stock.history(period=period)['Close']
-            data[ticker] = hist
-        return data
+            hist = stock.history(period=period)
+            data[ticker] = hist['Close']
+            volume_data[ticker] = hist['Volume']
+        return data, volume_data
     except Exception as e:
-        return None
+        return None, None
 
 def calculate_correlation(data):
     """Calculate correlation matrix from stock data."""
@@ -45,7 +51,7 @@ def get_price_changes(data):
     """Calculate price changes for each stock."""
     if data is None or data.empty:
         return None
-    
+
     changes = {}
     for column in data.columns:
         initial_price = data[column].iloc[0]
@@ -57,3 +63,39 @@ def get_price_changes(data):
             'percent_change': round(percent_change, 2)
         }
     return changes
+
+def calculate_technical_indicators(data):
+    """Calculate technical indicators for the stocks."""
+    if data is None or data.empty:
+        return None
+
+    indicators = {}
+    for column in data.columns:
+        series = data[column]
+        # Calculate 20-day moving average
+        ma20 = series.rolling(window=20).mean()
+        # Calculate 50-day moving average
+        ma50 = series.rolling(window=50).mean()
+        # Calculate RSI
+        delta = series.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+
+        indicators[column] = {
+            'MA20': ma20.iloc[-1],
+            'MA50': ma50.iloc[-1],
+            'RSI': rsi.iloc[-1]
+        }
+    return indicators
+
+def normalize_data(data):
+    """Normalize stock prices for comparison."""
+    if data is None or data.empty:
+        return None
+
+    normalized = pd.DataFrame()
+    for column in data.columns:
+        normalized[column] = data[column] / data[column].iloc[0] * 100
+    return normalized
