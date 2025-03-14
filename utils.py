@@ -27,18 +27,40 @@ def get_company_info(ticker):
     except Exception as e:
         return None
 
-def fetch_stock_data(tickers, period='1y'):
-    """Fetch historical stock data for multiple tickers."""
+def fetch_stock_data(tickers, period='1y', force_refresh=True):
+    """Fetch historical stock data for multiple tickers with forced refresh option."""
     try:
         data = pd.DataFrame()
         volume_data = pd.DataFrame()
+
+        # Get current time for interval calculation
+        end_time = datetime.now()
+        if period == '1d':
+            start_time = end_time - timedelta(days=1)
+            interval = '1m'
+        elif period == '5d':
+            start_time = end_time - timedelta(days=5)
+            interval = '5m'
+        else:
+            start_time = None
+            interval = '1d'
+
         for ticker in tickers:
             stock = yf.Ticker(ticker)
-            hist = stock.history(period=period)
-            data[ticker] = hist['Close']
-            volume_data[ticker] = hist['Volume']
+
+            # Use start and end times for intraday data
+            if start_time and end_time:
+                hist = stock.history(start=start_time, end=end_time, interval=interval)
+            else:
+                hist = stock.history(period=period, interval=interval)
+
+            if not hist.empty:
+                data[ticker] = hist['Close']
+                volume_data[ticker] = hist['Volume']
+
         return data, volume_data
     except Exception as e:
+        print(f"Error fetching data: {str(e)}")
         return None, None
 
 def calculate_correlation(data):

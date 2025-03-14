@@ -72,12 +72,20 @@ st.sidebar.title("Analysis Settings")
 auto_refresh = st.sidebar.checkbox("Auto-refresh data", value=True)
 st.session_state.auto_refresh = auto_refresh
 
-# Timeframe selection with custom periods
-timeframe = st.sidebar.selectbox(
-    "Select Analysis Timeframe",
-    options=['1mo', '3mo', '6mo', '1y', '2y', '5y'],
-    index=3
-)
+# Update frequency selection
+if auto_refresh:
+    timeframe = st.sidebar.selectbox(
+        "Select Update Frequency",
+        options=['1d', '5d', '1mo', '3mo', '6mo', '1y'],
+        index=0,
+        help="Select '1d' or '5d' for real-time updates"
+    )
+else:
+    timeframe = st.sidebar.selectbox(
+        "Select Analysis Timeframe",
+        options=['1mo', '3mo', '6mo', '1y', '2y', '5y'],
+        index=3
+    )
 
 # Stock selection for comparison
 selected_stocks = st.sidebar.multiselect(
@@ -97,7 +105,7 @@ if st.session_state.auto_refresh and time.time() - st.session_state.last_refresh
 
 # Fetch and process data
 with st.spinner('Fetching stock data...'):
-    stock_data, volume_data = fetch_stock_data(selected_stocks, timeframe)
+    stock_data, volume_data = fetch_stock_data(selected_stocks, timeframe, force_refresh=True)
 
     if stock_data is None:
         st.error("Failed to fetch stock data. Please try again later.")
