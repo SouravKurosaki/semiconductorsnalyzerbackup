@@ -28,18 +28,23 @@ def get_company_info(ticker):
         return None
 
 def fetch_stock_data(tickers, period='1y'):
-    """Fetch historical stock data for multiple tickers with 2-day interval."""
+    """Fetch historical stock data for multiple tickers and resample to 2-day intervals."""
     try:
         data = pd.DataFrame()
         volume_data = pd.DataFrame()
 
         for ticker in tickers:
             stock = yf.Ticker(ticker)
-            hist = stock.history(period=period, interval='2d')
+            # Fetch daily data
+            hist = stock.history(period=period, interval='1d')
 
             if not hist.empty:
-                data[ticker] = hist['Close']
-                volume_data[ticker] = hist['Volume']
+                # Resample to 2-day intervals
+                close_data = hist['Close'].resample('2D').last()
+                volume_data_2d = hist['Volume'].resample('2D').sum()
+
+                data[ticker] = close_data
+                volume_data[ticker] = volume_data_2d
 
         return data, volume_data
     except Exception as e:
