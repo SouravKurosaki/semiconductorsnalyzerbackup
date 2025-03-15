@@ -49,9 +49,9 @@ def fetch_stock_data(tickers, period='1y'):
                     logger.warning(f"No data received for {ticker}")
                     continue
 
-                # Resample to 2-day intervals
-                close_data = hist['Close'].resample('2D').last()
-                volume_data_2d = hist['Volume'].resample('2D').sum()
+                # Resample to 2-day intervals and fill missing values
+                close_data = hist['Close'].resample('2D').last().fillna(method='ffill')
+                volume_data_2d = hist['Volume'].resample('2D').sum().fillna(0)
 
                 data[ticker] = close_data
                 volume_data[ticker] = volume_data_2d
