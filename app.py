@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
@@ -80,149 +81,154 @@ if not selected_stocks:
     selected_stocks = SEMICONDUCTOR_TICKERS[:3]
     st.sidebar.warning("At least one stock must be selected. Defaulting to first three stocks.")
 
-# Fetch and process data
-with st.spinner('Fetching stock data...'):
-    stock_data, volume_data = fetch_stock_data(selected_stocks, timeframe)
+try:
+    # Fetch and process data
+    with st.spinner('Fetching stock data...'):
+        stock_data, volume_data = fetch_stock_data(selected_stocks, timeframe)
 
-    if stock_data is None:
-        st.error("Failed to fetch stock data. Please try again later.")
-        st.stop()
+        if stock_data is None or stock_data.empty:
+            st.error("Failed to fetch stock data. Please try again later.")
+            st.stop()
 
-    correlation_matrix = calculate_correlation(stock_data)
-    price_changes = get_price_changes(stock_data)
-    technical_indicators = calculate_technical_indicators(stock_data)
-    normalized_data = normalize_data(stock_data)
+        correlation_matrix = calculate_correlation(stock_data)
+        price_changes = get_price_changes(stock_data)
+        technical_indicators = calculate_technical_indicators(stock_data)
+        normalized_data = normalize_data(stock_data)
 
-# Display last update time
-st.sidebar.info("Data updates every 2 days")
+    # Display last update time
+    st.sidebar.info("Data updates every 2 days")
 
-# Create tabs for different analyses
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📈 Price Analysis",
-    "🔄 Correlation Analysis",
-    "📊 Volume Analysis",
-    "ℹ️ Company Information"
-])
+    # Create tabs for different analyses
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📈 Price Analysis",
+        "🔄 Correlation Analysis",
+        "📊 Volume Analysis",
+        "ℹ️ Company Information"
+    ])
 
-with tab1:
-    st.header("Stock Price Analysis")
+    with tab1:
+        st.header("Stock Price Analysis")
 
-    # Price chart type selector
-    chart_type = st.radio(
-        "Select Chart Type",
-        options=["Absolute Prices", "Normalized (Base 100)"],
-        horizontal=True
-    )
+        # Price chart type selector
+        chart_type = st.radio(
+            "Select Chart Type",
+            options=["Absolute Prices", "Normalized (Base 100)"],
+            horizontal=True
+        )
 
-    # Display selected chart
-    if chart_type == "Absolute Prices":
-        fig_trends = px.line(stock_data, title="Stock Price Evolution")
-    else:
-        fig_trends = px.line(normalized_data, title="Normalized Price Evolution (Base 100)")
+        # Display selected chart
+        if chart_type == "Absolute Prices":
+            fig_trends = px.line(stock_data, title="Stock Price Evolution")
+        else:
+            fig_trends = px.line(normalized_data, title="Normalized Price Evolution (Base 100)")
 
-    fig_trends.update_layout(
-        height=600,
-        xaxis_title="Date",
-        yaxis_title="Price (USD)" if chart_type == "Absolute Prices" else "Normalized Price",
-        hovermode="x unified"
-    )
-    st.plotly_chart(fig_trends, use_container_width=True)
+        fig_trends.update_layout(
+            height=600,
+            xaxis_title="Date",
+            yaxis_title="Price (USD)" if chart_type == "Absolute Prices" else "Normalized Price",
+            hovermode="x unified"
+        )
+        st.plotly_chart(fig_trends, use_container_width=True)
 
-    # Technical Indicators
-    if technical_indicators:
-        st.subheader("Technical Indicators")
-        indicator_cols = st.columns(len(selected_stocks))
-        for idx, ticker in enumerate(selected_stocks):
-            with indicator_cols[idx]:
-                rsi_value = technical_indicators[ticker]['RSI']
-                ma20_value = technical_indicators[ticker]['MA20']
+        # Technical Indicators
+        if technical_indicators:
+            st.subheader("Technical Indicators")
+            indicator_cols = st.columns(len(selected_stocks))
+            for idx, ticker in enumerate(selected_stocks):
+                with indicator_cols[idx]:
+                    rsi_value = technical_indicators[ticker]['RSI']
+                    ma20_value = technical_indicators[ticker]['MA20']
 
-                # RSI color coding
-                rsi_color = (
-                    "🔴" if rsi_value > 70 else
-                    "🟢" if rsi_value < 30 else
-                    "⚪"
-                )
+                    # RSI color coding
+                    rsi_color = (
+                        "🔴" if rsi_value > 70 else
+                        "🟢" if rsi_value < 30 else
+                        "⚪"
+                    )
 
-                st.markdown(f"""
-                    <div class="stMetric">
-                        <h3>{ticker}</h3>
-                        <p class="metric-value">RSI: {rsi_color} {rsi_value:.2f}</p>
-                        <p class="metric-value">MA20: ${ma20_value:.2f}</p>
-                    </div>
-                """, unsafe_allow_html=True)
+                    st.markdown(f"""
+                        <div class="stMetric">
+                            <h3>{ticker}</h3>
+                            <p class="metric-value">RSI: {rsi_color} {rsi_value:.2f}</p>
+                            <p class="metric-value">MA20: ${ma20_value:.2f}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
 
-with tab2:
-    st.header("Correlation Analysis")
+    with tab2:
+        st.header("Correlation Analysis")
 
-    # Correlation Matrix using Plotly
-    fig_corr = px.imshow(
-        correlation_matrix,
-        color_continuous_scale='RdBu',
-        aspect='auto',
-        title='Correlation Heatmap'
-    )
-    fig_corr.update_layout(
-        height=500,
-        xaxis_title="Stock Ticker",
-        yaxis_title="Stock Ticker"
-    )
-    st.plotly_chart(fig_corr, use_container_width=True)
+        # Correlation Matrix using Plotly
+        fig_corr = px.imshow(
+            correlation_matrix,
+            color_continuous_scale='RdBu',
+            aspect='auto',
+            title='Correlation Heatmap'
+        )
+        fig_corr.update_layout(
+            height=500,
+            xaxis_title="Stock Ticker",
+            yaxis_title="Stock Ticker"
+        )
+        st.plotly_chart(fig_corr, use_container_width=True)
 
-    # Correlation explanation
-    st.markdown("""
-        ### Understanding Correlation Values
-        - **1.0**: Perfect positive correlation
-        - **0.0**: No correlation
-        - **-1.0**: Perfect negative correlation
+        # Correlation explanation
+        st.markdown("""
+            ### Understanding Correlation Values
+            - **1.0**: Perfect positive correlation
+            - **0.0**: No correlation
+            - **-1.0**: Perfect negative correlation
 
-        Stocks with high positive correlation tend to move in the same direction,
-        while negative correlation indicates opposite movements.
-    """)
+            Stocks with high positive correlation tend to move in the same direction,
+            while negative correlation indicates opposite movements.
+        """)
 
-with tab3:
-    st.header("Volume Analysis")
+    with tab3:
+        st.header("Volume Analysis")
 
-    # Volume chart
-    fig_volume = px.bar(
-        volume_data,
-        title="Trading Volume Over Time",
-        barmode='group'
-    )
-    fig_volume.update_layout(
-        height=500,
-        xaxis_title="Date",
-        yaxis_title="Volume",
-        hovermode="x unified"
-    )
-    st.plotly_chart(fig_volume, use_container_width=True)
+        # Volume chart
+        fig_volume = px.bar(
+            volume_data,
+            title="Trading Volume Over Time",
+            barmode='group'
+        )
+        fig_volume.update_layout(
+            height=500,
+            xaxis_title="Date",
+            yaxis_title="Volume",
+            hovermode="x unified"
+        )
+        st.plotly_chart(fig_volume, use_container_width=True)
 
-with tab4:
-    st.header("Company Information")
+    with tab4:
+        st.header("Company Information")
 
-    # Company selector
-    selected_company = st.selectbox("Select a company", selected_stocks)
+        # Company selector
+        selected_company = st.selectbox("Select a company", selected_stocks)
 
-    company_info = get_company_info(selected_company)
-    if company_info:
-        # Company metrics
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Market Cap", f"${company_info['market_cap']:,.0f}" if isinstance(company_info['market_cap'], (int, float)) else "N/A")
-        with col2:
-            st.metric("P/E Ratio", f"{company_info['pe_ratio']:.2f}" if isinstance(company_info['pe_ratio'], (int, float)) else "N/A")
-        with col3:
-            st.metric("Dividend Yield", f"{company_info['dividend_yield']:.2%}" if isinstance(company_info['dividend_yield'], (int, float)) else "N/A")
+        company_info = get_company_info(selected_company)
+        if company_info:
+            # Company metrics
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Market Cap", f"${company_info['market_cap']:,.0f}" if isinstance(company_info['market_cap'], (int, float)) else "N/A")
+            with col2:
+                st.metric("P/E Ratio", f"{company_info['pe_ratio']:.2f}" if isinstance(company_info['pe_ratio'], (int, float)) else "N/A")
+            with col3:
+                st.metric("Dividend Yield", f"{company_info['dividend_yield']:.2%}" if isinstance(company_info['dividend_yield'], (int, float)) else "N/A")
 
-        # Company details
-        st.subheader(company_info['name'])
-        st.write("**Sector:** ", company_info['sector'])
-        st.write("**Industry:** ", company_info['industry'])
-        st.write("**Website:** ", company_info['website'])
-        st.write("**Description:**")
-        st.write(company_info['description'])
-    else:
-        st.error(f"Could not fetch information for {selected_company}")
+            # Company details
+            st.subheader(company_info['name'])
+            st.write("**Sector:** ", company_info['sector'])
+            st.write("**Industry:** ", company_info['industry'])
+            st.write("**Website:** ", company_info['website'])
+            st.write("**Description:**")
+            st.write(company_info['description'])
+        else:
+            st.error(f"Could not fetch information for {selected_company}")
+
+except Exception as e:
+    st.error(f"An error occurred: {str(e)}")
+    st.stop()
 
 # Footer
 st.markdown("---")
