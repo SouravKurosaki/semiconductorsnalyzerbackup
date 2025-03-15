@@ -3,7 +3,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import seaborn as sns
 import matplotlib.pyplot as plt
-import time
 from utils import (
     SEMICONDUCTOR_TICKERS, 
     fetch_stock_data, 
@@ -21,12 +20,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# Initialize session state for auto refresh
-if 'auto_refresh' not in st.session_state:
-    st.session_state.auto_refresh = True
-if 'last_refresh' not in st.session_state:
-    st.session_state.last_refresh = time.time()
 
 # Custom CSS with dark mode support
 st.markdown("""
@@ -68,24 +61,13 @@ st.markdown("""
 # Sidebar configuration
 st.sidebar.title("Analysis Settings")
 
-# Auto-refresh toggle
-auto_refresh = st.sidebar.checkbox("Auto-refresh data", value=True)
-st.session_state.auto_refresh = auto_refresh
-
-# Update frequency selection
-if auto_refresh:
-    timeframe = st.sidebar.selectbox(
-        "Select Update Frequency",
-        options=['1d', '5d', '1mo', '3mo', '6mo', '1y'],
-        index=0,
-        help="Select '1d' or '5d' for real-time updates"
-    )
-else:
-    timeframe = st.sidebar.selectbox(
-        "Select Analysis Timeframe",
-        options=['1mo', '3mo', '6mo', '1y', '2y', '5y'],
-        index=3
-    )
+# Timeframe selection
+timeframe = st.sidebar.selectbox(
+    "Select Analysis Timeframe",
+    options=['1mo', '3mo', '6mo', '1y', '2y', '5y'],
+    index=3,
+    help="Data updates every 2 days"
+)
 
 # Stock selection for comparison
 selected_stocks = st.sidebar.multiselect(
@@ -98,14 +80,9 @@ if not selected_stocks:
     selected_stocks = SEMICONDUCTOR_TICKERS[:3]
     st.sidebar.warning("At least one stock must be selected. Defaulting to first three stocks.")
 
-# Auto-refresh logic
-if st.session_state.auto_refresh and time.time() - st.session_state.last_refresh >= 2:
-    st.session_state.last_refresh = time.time()
-    st.rerun()
-
 # Fetch and process data
 with st.spinner('Fetching stock data...'):
-    stock_data, volume_data = fetch_stock_data(selected_stocks, timeframe, force_refresh=True)
+    stock_data, volume_data = fetch_stock_data(selected_stocks, timeframe)
 
     if stock_data is None:
         st.error("Failed to fetch stock data. Please try again later.")
@@ -117,7 +94,7 @@ with st.spinner('Fetching stock data...'):
     normalized_data = normalize_data(stock_data)
 
 # Display last update time
-st.sidebar.text(f"Last updated: {time.strftime('%H:%M:%S')}")
+st.sidebar.info("Data updates every 2 days")
 
 # Create tabs for different analyses
 tab1, tab2, tab3, tab4 = st.tabs([

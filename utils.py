@@ -27,32 +27,15 @@ def get_company_info(ticker):
     except Exception as e:
         return None
 
-def fetch_stock_data(tickers, period='1y', force_refresh=True):
-    """Fetch historical stock data for multiple tickers with forced refresh option."""
+def fetch_stock_data(tickers, period='1y'):
+    """Fetch historical stock data for multiple tickers with 2-day interval."""
     try:
         data = pd.DataFrame()
         volume_data = pd.DataFrame()
 
-        # Get current time for interval calculation
-        end_time = datetime.now()
-        if period == '1d':
-            start_time = end_time - timedelta(days=1)
-            interval = '1m'
-        elif period == '5d':
-            start_time = end_time - timedelta(days=5)
-            interval = '5m'
-        else:
-            start_time = None
-            interval = '1d'
-
         for ticker in tickers:
             stock = yf.Ticker(ticker)
-
-            # Use start and end times for intraday data
-            if start_time and end_time:
-                hist = stock.history(start=start_time, end=end_time, interval=interval)
-            else:
-                hist = stock.history(period=period, interval=interval)
+            hist = stock.history(period=period, interval='2d')
 
             if not hist.empty:
                 data[ticker] = hist['Close']
