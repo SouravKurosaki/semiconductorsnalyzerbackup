@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import seaborn as sns
 import matplotlib.pyplot as plt
-from utils import (
+from modules.utils import (
     SEMICONDUCTOR_TICKERS, 
     fetch_stock_data, 
     calculate_correlation,
